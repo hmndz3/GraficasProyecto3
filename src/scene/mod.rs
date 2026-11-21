@@ -7,6 +7,7 @@ pub mod props;
 pub mod ship;
 pub mod skybox;
 pub mod system;
+pub mod tour;
 
 pub use camera::{Camera, CameraMode};
 pub use ship::{FlightMode, Ship, ShipInput};
