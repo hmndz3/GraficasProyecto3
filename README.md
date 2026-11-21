@@ -273,15 +273,30 @@ la diferencia en triángulos.
 
 El acelerador, el freno y los tres giros se suavizan con un filtro
 exponencial `1 - exp(-k·dt)`: los controles tienen inercia y la respuesta
-es la misma en una máquina rápida que en una lenta. Hay una prueba que
-simula el mismo tiempo a 120 y a 30 cuadros por segundo y compara dónde
-terminó la nave.
+es la misma en una máquina rápida que en una lenta. La posición y el
+ángulo se integran con el promedio de la velocidad antes y después del
+paso, no con el valor final: así dos máquinas con distinta tasa de cuadros
+describen prácticamente la misma trayectoria. Hay una prueba que simula el
+mismo tiempo a 120 y a 30 cuadros por segundo y compara dónde terminó la
+nave.
 
-La gravedad es la ley del inverso del cuadrado sobre todos los cuerpos.
+En el vacío no hay rozamiento: la nave conserva su velocidad y se detiene
+con el freno (`Espacio`). Si tuviera un rozamiento permanente, la gravedad
+no podría sostener ninguna trayectoria porque la velocidad tangencial se
+apagaría sola.
+
+La gravedad es la ley del inverso del cuadrado sobre todos los cuerpos, y
+no es un adorno aparte del movimiento que se dibuja: las órbitas se
+construyen con la velocidad que corresponde al mismo parámetro
+gravitatorio (`ω = √(µ/r³)`), de modo que la física que siente la nave y
+el sistema que se ve en pantalla son el mismo.
+
 La colisión devuelve la nave justo afuera de la superficie —consultando el
 relieve en el punto correcto, con el planeta ya girado— y anula la
 componente de velocidad que apuntaba hacia adentro, así que resbala en vez
-de quedarse pegada.
+de quedarse pegada. El choque se resuelve sobre la velocidad **relativa**
+al cuerpo: los planetas se mueven, y con la velocidad absoluta una nave
+posada en la superficie saldría despedida.
 
 El **modo local** (`L`) nivela la nave con la vertical del cuerpo más
 cercano, lo que hace cómodo rodear un planeta sin cortar el vuelo.
@@ -391,7 +406,7 @@ docs/
 
 ## Pruebas
 
-78 pruebas automáticas, en español, repartidas en seis archivos:
+81 pruebas automáticas, en español, repartidas en seis archivos:
 
 ```bash
 cargo test --release
@@ -405,8 +420,9 @@ pantalla, que la icoesfera sea una malla cerrada en todos sus niveles, que
 el ruido sea reproducible y continuo, que los shaders animados cambien con
 el tiempo y los seis den resultados distintos, que los planetas no se
 salgan del plano eclíptico, que la simulación dependa del tiempo y no de
-los cuadros, que la nave no atraviese un planeta y que el recorrido del
-video sea continuo.
+los cuadros, que la nave no atraviese un planeta, que una nave
+sin velocidad orbital caiga hacia la estrella y una que acompaña a su
+planeta no, y que el recorrido del video sea continuo.
 
 ---
 
