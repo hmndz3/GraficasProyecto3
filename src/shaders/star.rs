@@ -34,12 +34,12 @@ impl StarShader {
     pub fn new(seed: u32) -> Self {
         Self {
             noise: Noise::new(seed),
-            scale: 2.6,
+            scale: 3.3,
             flow: 0.09,
             warp_strength: 0.85,
-            color_frio: Vec3::new(0.62, 0.10, 0.02),
-            color_medio: Vec3::new(1.50, 0.46, 0.06),
-            color_caliente: Vec3::new(2.60, 1.85, 0.75),
+            color_frio: Vec3::new(0.70, 0.070, 0.010),
+            color_medio: Vec3::new(2.10, 0.42, 0.030),
+            color_caliente: Vec3::new(6.00, 2.30, 0.45),
             intensity: 1.0,
         }
     }
@@ -70,7 +70,9 @@ impl FragmentShader for StarShader {
         );
 
         let f = self.noise.fbm(p + r * self.warp_strength, 5, 2.1, 0.52);
-        let v = (f * 0.5 + 0.5).clamp(0.0, 1.0);
+        // Se estira el contraste: sin esto el plasma queda en un gris
+        // anaranjado plano y no se distinguen los filamentos.
+        let v = ((f * 0.5 + 0.5 - 0.5) * 1.9 + 0.5).clamp(0.0, 1.0);
 
         // Granulacion fina: celdas de conveccion.
         let granos = 1.0 - self.noise.cellular(dir * (self.scale * 7.0) + Vec3::splat(t * 2.0));
@@ -103,7 +105,10 @@ pub struct CoronaShader {
     pub noise: Noise,
     pub color: Vec3,
     pub flow: f32,
+    /// Cuanto mas grande es la esfera de la corona que la estrella.
+    pub escala: f32,
 }
+
 
 impl FragmentShader for CoronaShader {
     fn shade(&self, frag: &Fragment, u: &Uniforms) -> Vec4 {
@@ -111,12 +116,21 @@ impl FragmentShader for CoronaShader {
         let t = u.time * self.flow;
         let vista = direccion_vista(frag, u);
 
-        // Solo el anillo exterior aporta: el centro se deja transparente
-        // para no tapar la superficie.
-        let anillo = borde(frag.normal, vista, 3.4);
-        let lenguas = self.noise.fbm(dir * 3.4 + Vec3::new(t, -t * 0.6, t * 0.3), 4, 2.2, 0.5) * 0.5 + 0.5;
-        let alpha = (anillo * (0.45 + lenguas * 0.9)).clamp(0.0, 1.0);
+        // La corona se dibuja sobre una esfera mas grande que la
+        // estrella. El coseno entre la normal y la vista dice a que
+        // radio aparente cae cada pixel: vale `limbo` justo en el borde
+        // del disco de la estrella y cero en la silueta de la esfera
+        // exterior. Se quiere un halo que nazca en el limbo y se apague
+        // hacia afuera, y que no aporte nada por delante de la estrella.
+        let c = frag.normal.dot(vista).abs().clamp(0.0, 1.0);
+        let limbo = (1.0 - 1.0 / (self.escala * self.escala)).max(0.0).sqrt();
+        let hacia_afuera = (c / limbo.max(1e-3)).clamp(0.0, 1.0).powf(2.6);
+        let delante = 1.0 - smoothstep(limbo, limbo + 0.09, c);
 
-        Vec4::from_vec3(self.color, alpha * 0.9)
+        let lenguas =
+            self.noise.fbm(dir * 3.4 + Vec3::new(t, -t * 0.6, t * 0.3), 4, 2.2, 0.5) * 0.5 + 0.5;
+        let alpha = (hacia_afuera * delante * (0.35 + lenguas * 0.85)).clamp(0.0, 1.0);
+
+        Vec4::from_vec3(self.color, alpha * 0.85)
     }
 }

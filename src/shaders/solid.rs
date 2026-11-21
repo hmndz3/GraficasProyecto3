@@ -25,13 +25,20 @@ pub struct PropShader {
 
 impl FragmentShader for PropShader {
     fn shade(&self, frag: &Fragment, u: &Uniforms) -> Vec4 {
-        let v = self.noise.fbm(frag.local * self.veta + Vec3::splat(u.param * 31.0), 4, 2.0, 0.5)
+        // Las copias de un mismo modelo se fusionan en una sola malla
+        // antes de dibujarse, asi que el parametro por instancia viaja en
+        // el canal libre del vertice en vez de en un uniform.
+        let semilla = frag.height;
+        let v = self
+            .noise
+            .fbm(frag.local * self.veta + Vec3::splat(semilla * 37.0), 4, 2.0, 0.5)
             * 0.5
             + 0.5;
-        let albedo = mezcla(self.base, self.alterno, v).mul_elem(u.tint);
+        let tinte = u.tint * (0.85 + semilla * 0.3);
+        let albedo = mezcla(self.base, self.alterno, v).mul_elem(tinte);
         let color = iluminar(albedo, frag.normal, frag, u, 32.0, self.especular);
         let brillo_borde = borde(frag.normal, direccion_vista(frag, u), 2.0);
-        Vec4::from_vec3(color + self.emision.mul_elem(u.tint) * (0.4 + brillo_borde * 0.9), 1.0)
+        Vec4::from_vec3(color + self.emision.mul_elem(tinte) * (0.4 + brillo_borde * 0.9), 1.0)
     }
 }
 
@@ -50,15 +57,15 @@ impl FragmentShader for ShipShader {
 
         // Rejilla de paneles: lineas finas donde el casco se junta.
         let rejilla = {
-            let gx = (p.x * 6.0).fract().abs();
-            let gz = (p.z * 4.0).fract().abs();
+            let gx = (p.x * 12.0).fract().abs();
+            let gz = (p.z * 8.0).fract().abs();
             let linea = step(0.94, gx.max(1.0 - gx) * 2.0 - 1.0 + 0.5)
                 .max(step(0.94, gz.max(1.0 - gz) * 2.0 - 1.0 + 0.5));
             1.0 - linea * 0.35
         };
 
         // Franja de color a lo largo del fuselaje.
-        let franja = smoothstep(0.06, 0.02, p.y.abs()) * smoothstep(-0.9, 0.2, p.z);
+        let franja = smoothstep(0.035, 0.012, p.y.abs()) * smoothstep(-0.45, 0.10, p.z);
 
         let sucio = self.noise.fbm(p * 7.0, 3, 2.0, 0.5) * 0.5 + 0.5;
         let mut albedo = mezcla(self.casco * (0.8 + sucio * 0.4), self.franja, franja * 0.85);
@@ -71,8 +78,12 @@ impl FragmentShader for ShipShader {
         let s = especular(frag.normal, l, v, 28.0) * 0.5 + especular(frag.normal, l, v, 300.0) * 1.3;
         let mut color = albedo.mul_elem(AMBIENTE * 3.0 + Vec3::splat(d)) + Vec3::splat(s);
 
-        // La cabina emite luz propia: es la parte alta y adelantada.
-        let es_cabina = smoothstep(0.16, 0.24, p.y) * smoothstep(-0.2, 0.1, p.z);
+        // La cabina emite luz propia. Se exige que el punto este alto,
+        // adelantado y cerca del eje: sin la condicion sobre x tambien se
+        // encenderian las puntas de las alas.
+        let es_cabina = smoothstep(0.06, 0.10, p.y)
+            * smoothstep(-0.12, 0.06, p.z)
+            * (1.0 - smoothstep(0.10, 0.16, p.x.abs()));
         color = color + self.cabina * es_cabina * 1.4;
 
         Vec4::from_vec3(color, 1.0)
@@ -115,5 +126,25 @@ impl FragmentShader for AtmosphereShader {
         let lado_luz = frag.normal.dot(l).max(0.0).powf(0.6);
         let a = anillo * (0.12 + lado_luz * 0.95) * self.intensidad;
         Vec4::from_vec3(self.color, a.clamp(0.0, 1.0))
+    }
+}
+
+/// Color plano con mezcla aditiva que se desvanece cerca de la camara.
+///
+/// Lo usan las lineas de orbita: de lejos dejan ver que todos los
+/// planetas comparten el plano ecliptico, pero si la nave se acerca a una
+/// de ellas la linea desaparece en vez de cruzar la pantalla.
+pub struct TintShader {
+    pub color: Vec3,
+    pub alpha: f32,
+    /// Distancia a la que la linea alcanza su opacidad plena.
+    pub distancia_visible: f32,
+}
+
+impl FragmentShader for TintShader {
+    fn shade(&self, frag: &Fragment, u: &Uniforms) -> Vec4 {
+        let d = (frag.world - u.camera_world).length();
+        let a = self.alpha * smoothstep(self.distancia_visible * 0.25, self.distancia_visible, d);
+        Vec4::from_vec3(self.color, a)
     }
 }

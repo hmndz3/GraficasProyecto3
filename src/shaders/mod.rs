@@ -18,5 +18,5 @@ pub use ice::IceShader;
 pub use ocean::OceanShader;
 pub use rings::RingShader;
 pub use rocky::RockyShader;
-pub use solid::{AtmosphereShader, GlowShader, PropShader, ShipShader};
+pub use solid::{AtmosphereShader, GlowShader, PropShader, ShipShader, TintShader};
 pub use star::{CoronaShader, StarShader};

@@ -48,16 +48,16 @@ pub fn ship() -> Mesh {
     for side in [-1.0f32, 1.0] {
         attach(
             &mut m,
-            box_mesh(Vec3::new(0.62, 0.035, 0.34)),
-            Mat4::translation(Vec3::new(side * 0.62, -0.02, -0.28))
-                * Mat4::rotation_z(side * -0.22)
-                * Mat4::rotation_y(side * 0.35),
+            box_mesh(Vec3::new(0.46, 0.035, 0.30)),
+            Mat4::translation(Vec3::new(side * 0.46, -0.02, -0.26))
+                * Mat4::rotation_z(side * -0.18)
+                * Mat4::rotation_y(side * 0.30),
         );
         // Aleta vertical en la punta del ala.
         attach(
             &mut m,
-            box_mesh(Vec3::new(0.03, 0.16, 0.20)),
-            Mat4::translation(Vec3::new(side * 1.18, 0.12, -0.34)),
+            box_mesh(Vec3::new(0.03, 0.13, 0.17)),
+            Mat4::translation(Vec3::new(side * 0.88, 0.10, -0.30)),
         );
     }
 
@@ -84,9 +84,15 @@ pub fn ship() -> Mesh {
         );
     }
 
+    // El modelo se arma a tamaño comodo y al final se reduce: asi la nave
+    // no tapa el planeta en la camara de persecucion.
+    m.transform(&Mat4::uniform_scale(ESCALA_NAVE));
     m.update_bounds();
     m
 }
+
+/// Escala final de la nave y de todo lo que va pegado a ella.
+pub const ESCALA_NAVE: f32 = 0.5;
 
 /// Disco de la llama del motor, dibujado con mezcla aditiva detras de la
 /// nave.
@@ -95,10 +101,11 @@ pub fn engine_flare() -> Mesh {
     for side in [-1.0f32, 1.0] {
         attach(
             &mut m,
-            cone(0.15, 0.9, 8),
-            Mat4::translation(Vec3::new(side * 0.34, -0.06, -1.15)) * Mat4::rotation_x(-PI * 0.5),
+            cone(0.13, 0.55, 8),
+            Mat4::translation(Vec3::new(side * 0.34, -0.06, -1.10)) * Mat4::rotation_x(-PI * 0.5),
         );
     }
+    m.transform(&Mat4::uniform_scale(ESCALA_NAVE));
     m
 }
 
