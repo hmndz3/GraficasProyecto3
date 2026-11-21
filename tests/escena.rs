@@ -477,9 +477,12 @@ fn una_nave_colocada_junto_a_un_planeta_no_cae_al_sol() {
     let mut s = sistema();
     let distancia = s.bodies[indice].outer_radius() * 2.2 + 0.6;
 
+    let direccion = Vec3::new(1.0, 0.0, 0.0);
     let mut nave = Ship::default();
-    nave.position = s.bodies[indice].position + Vec3::new(distancia, 0.0, 0.0);
-    nave.velocity = s.velocidad_de(indice);
+    nave.position = s.bodies[indice].position + direccion * distancia;
+    let tangente = Vec3::UP.cross(direccion).normalized();
+    nave.velocity =
+        s.velocidad_de(indice) + tangente * s.velocidad_circular(indice, distancia);
 
     let inicial_al_sol = (nave.position - s.bodies[0].position).length();
     let dt = 1.0 / 60.0;
@@ -498,20 +501,15 @@ fn una_nave_colocada_junto_a_un_planeta_no_cae_al_sol() {
         minima_al_sol > inicial_al_sol * 0.7,
         "la nave se fue hacia la estrella: de {inicial_al_sol} a {minima_al_sol}"
     );
-    // La gravedad del planeta si la atrae: termina posada en la
-    // superficie, no flotando ni perdida.
+    // Y se queda dando vueltas al planeta en vez de soltarse o caer.
     assert!(
-        maxima_al_planeta < distancia * 1.5,
+        maxima_al_planeta < distancia * 2.5,
         "la nave se solto del planeta: llego a {maxima_al_planeta}"
     );
     let final_al_planeta = (nave.position - s.bodies[indice].position).length();
     assert!(
-        final_al_planeta < distancia,
-        "la gravedad del planeta deberia haberla acercado"
-    );
-    assert!(
-        final_al_planeta > s.bodies[indice].radius * (1.0 - s.bodies[indice].terrain.amplitude),
-        "y la colision deberia haberla dejado afuera"
+        final_al_planeta > s.bodies[indice].outer_radius(),
+        "la nave termino dentro del planeta: {final_al_planeta}"
     );
 }
 

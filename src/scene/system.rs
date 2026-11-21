@@ -595,6 +595,12 @@ impl SolarSystem {
         }
     }
 
+    /// Velocidad que hace falta para dar vueltas alrededor de un cuerpo a
+    /// una distancia dada, con la misma gravedad que siente la nave.
+    pub fn velocidad_circular(&self, indice: usize, distancia: f32) -> f32 {
+        (G * self.bodies[indice].mass / distancia.max(0.1)).sqrt()
+    }
+
     /// Indice del cuerpo mas cercano a un punto, contando la estrella.
     pub fn mas_cercano_total(&self, p: Vec3) -> usize {
         let mut mejor = 0;
