@@ -16,7 +16,7 @@ el rasterizado entre los núcleos del procesador.
 
 | Integrante | Carné / usuario |
 |---|---|
-| Harry Mendez | [@hmndz3](https://github.com/hmndz3) |
+| Harry Mendez | [@hmndz3](https://github.com/hmndz3) - 24852 | 
 | Juan Gualim | [@JuanGualim](https://github.com/JuanGualim) — 24852 |
 
 ---
