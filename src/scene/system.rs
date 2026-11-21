@@ -202,7 +202,7 @@ impl SolarSystem {
                     (0.80, Vec3::new(0.45, 0.42, 0.38)),
                     (1.0, Vec3::new(0.93, 0.95, 0.97)),
                 ],
-                nubes: 0.55,
+                nubes: 0.48,
                 velocidad_nubes: 0.013,
                 color_atmosfera: Vec3::new(0.28, 0.52, 1.0),
             }),
@@ -210,7 +210,7 @@ impl SolarSystem {
             atmosphere: Some(Atmosphere {
                 color: Vec3::new(0.26, 0.48, 0.98),
                 thickness: 0.055,
-                intensity: 0.85,
+                intensity: 0.60,
             }),
             rings: None,
             prop_batches: fusionar_props(&props),
@@ -227,7 +227,7 @@ impl SolarSystem {
         bodies.push(Body {
             name: "SELENE".to_string(),
             radius: 0.42,
-            orbit: Orbit { radius: 3.4, speed: 0.62, phase: 0.0, inclination: to_radians(9.0) },
+            orbit: Orbit { radius: 6.0, speed: 0.42, phase: 0.0, inclination: to_radians(9.0) },
             parent: Some(2),
             spin_speed: 0.62,
             axial_tilt: 0.0,
@@ -315,7 +315,7 @@ impl SolarSystem {
         bodies.push(Body {
             name: "IO MENOR".to_string(),
             radius: 0.5,
-            orbit: Orbit { radius: 6.2, speed: 0.42, phase: 1.0, inclination: to_radians(4.0) },
+            orbit: Orbit { radius: 9.5, speed: 0.30, phase: 1.0, inclination: to_radians(4.0) },
             parent: Some(4),
             spin_speed: 0.5,
             axial_tilt: 0.0,

@@ -55,7 +55,7 @@ impl FragmentShader for OceanShader {
             ) * 0.035;
             let n_agua = (n_agua + Vec3::splat(olas)).normalized();
             let d = difuso(n_agua, l);
-            let s = especular(n_agua, l, v, 180.0) * 1.6;
+            let s = especular(n_agua, l, v, 420.0) * 1.1;
             let agua_lit = agua.mul_elem(AMBIENTE + Vec3::splat(d)) + Vec3::splat(s);
 
             if es_tierra <= 0.001 {
@@ -80,13 +80,13 @@ impl FragmentShader for OceanShader {
         let luz_nube = difuso(frag.normal, l);
         let color = mezcla(
             color,
-            Vec3::splat(0.92).mul_elem(AMBIENTE + Vec3::splat(luz_nube)),
+            Vec3::splat(0.76).mul_elem(AMBIENTE + Vec3::splat(luz_nube)),
             densidad * self.nubes,
         );
 
         // Halo atmosferico en el borde, mas intenso del lado iluminado.
         let halo = borde(frag.normal, v, 3.0) * difuso(frag.normal, l).max(0.08);
-        let color = color + self.color_atmosfera * halo * 0.85;
+        let color = color + self.color_atmosfera * halo * 0.60;
 
         Vec4::from_vec3(color, 1.0)
     }
