@@ -7,7 +7,9 @@
 //! modulos.
 
 pub mod geometry;
+pub mod grabar;
 pub mod math;
 pub mod noise;
 pub mod render;
+pub mod scene;
 pub mod shaders;
