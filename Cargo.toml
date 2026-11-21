@@ -1,0 +1,19 @@
+[package]
+name = "sistema_solar"
+version = "1.0.0"
+edition = "2021"
+authors = ["Harry Mendez", "Juan Gualim"]
+description = "Simulacion de un sistema solar renderizada con un software renderer propio"
+
+[dependencies]
+minifb = "0.29"
+rayon = "1.12"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.dev]
+opt-level = 2

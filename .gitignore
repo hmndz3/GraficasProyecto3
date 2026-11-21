@@ -1,0 +1,14 @@
+/target
+**/*.rs.bk
+Cargo.lock.bak
+
+# Herramientas locales
+CLAUDE.md
+AGENTS.md
+.claude/
+.vscode/
+.idea/
+
+# Capturas y renders temporales
+/capturas/
+*.ppm
