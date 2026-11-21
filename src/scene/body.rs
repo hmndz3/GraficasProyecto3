@@ -65,6 +65,22 @@ pub struct Orbit {
 }
 
 impl Orbit {
+    /// Orbita circular con la velocidad que corresponde al parametro
+    /// gravitatorio del cuerpo central: `omega = sqrt(mu / r^3)`.
+    ///
+    /// Construir las orbitas asi hace que el movimiento dibujado y la
+    /// gravedad que siente la nave describan el mismo sistema. Si las
+    /// velocidades se escogieran a ojo, una nave que acompaña a un
+    /// planeta caeria hacia la estrella aunque el planeta no lo haga.
+    pub fn kepler(radius: f32, mu: f32, phase: f32, inclination: f32) -> Self {
+        let speed = if radius > 1e-4 {
+            (mu / (radius * radius * radius)).sqrt()
+        } else {
+            0.0
+        };
+        Self { radius, speed, phase, inclination }
+    }
+
     pub fn position(&self, time: f32) -> Vec3 {
         let a = self.phase + self.speed * time;
         let (s, c) = a.sin_cos();
@@ -73,6 +89,25 @@ impl Orbit {
             p
         } else {
             Mat4::rotation_x(self.inclination).mul_point(p)
+        }
+    }
+
+    /// Velocidad instantanea a lo largo de la orbita.
+    ///
+    /// Es la derivada de `position` respecto del tiempo. Sirve para que
+    /// una nave que se coloca junto a un planeta viaje con el en vez de
+    /// quedarse atras y caer hacia la estrella.
+    pub fn velocity(&self, time: f32) -> Vec3 {
+        if self.speed.abs() < 1e-9 || self.radius <= 0.0 {
+            return Vec3::ZERO;
+        }
+        let a = self.phase + self.speed * time;
+        let (s, c) = a.sin_cos();
+        let v = Vec3::new(-s * self.radius * self.speed, 0.0, c * self.radius * self.speed);
+        if self.inclination.abs() < 1e-6 {
+            v
+        } else {
+            Mat4::rotation_x(self.inclination).mul_dir(v)
         }
     }
 

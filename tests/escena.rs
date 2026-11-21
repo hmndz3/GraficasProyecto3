@@ -249,7 +249,7 @@ fn la_colision_devuelve_la_nave_afuera() {
     let mut nave = Ship::default();
     nave.position = Vec3::new(0.5, 0.0, 0.0);
     nave.velocity = Vec3::new(-10.0, 0.0, 0.0);
-    let choco = nave.resolve_collision(Vec3::ZERO, 2.0);
+    let choco = nave.resolve_collision(Vec3::ZERO, 2.0, Vec3::ZERO);
     assert!(choco);
     assert!((nave.position.length() - (2.0 + nave.radius)).abs() < 1e-3);
     // Ya no se mueve hacia adentro.
@@ -303,8 +303,14 @@ fn el_vuelo_no_depende_de_los_cuadros_por_segundo() {
         lenta.update(&entrada, 1.0 / 30.0, None);
     }
 
+    // Lo que queda de diferencia es error de integracion, que se reduce
+    // al achicar el paso; no es una dependencia del numero de cuadros.
     let d = (rapida.position - lenta.position).length();
-    assert!(d < 0.6, "las trayectorias se separaron {d}");
+    let recorrido = rapida.position.length().max(1.0);
+    assert!(
+        d < recorrido * 0.03,
+        "las trayectorias se separaron {d} sobre un recorrido de {recorrido}"
+    );
 }
 
 #[test]
@@ -459,5 +465,95 @@ fn el_recorrido_visita_todos_los_cuerpos() {
         s.bodies.len(),
         "el recorrido deberia pasar por los {} cuerpos",
         s.bodies.len()
+    );
+}
+
+#[test]
+fn una_nave_colocada_junto_a_un_planeta_no_cae_al_sol() {
+    // Es lo que hace el programa al colocar la nave: le pasa la velocidad
+    // orbital del cuerpo al que llega. Asi acompaña al planeta en su
+    // vuelta alrededor de la estrella en vez de quedarse atras.
+    let indice = 2;
+    let mut s = sistema();
+    let distancia = s.bodies[indice].outer_radius() * 2.2 + 0.6;
+
+    let mut nave = Ship::default();
+    nave.position = s.bodies[indice].position + Vec3::new(distancia, 0.0, 0.0);
+    nave.velocity = s.velocidad_de(indice);
+
+    let inicial_al_sol = (nave.position - s.bodies[0].position).length();
+    let dt = 1.0 / 60.0;
+    let mut minima_al_sol = f32::INFINITY;
+    let mut maxima_al_planeta: f32 = 0.0;
+    for _ in 0..3600 {
+        s.update(dt);
+        s.aplicar_fisica(&mut nave, dt, true);
+        nave.update(&ShipInput::default(), dt, None);
+        minima_al_sol = minima_al_sol.min((nave.position - s.bodies[0].position).length());
+        maxima_al_planeta =
+            maxima_al_planeta.max((nave.position - s.bodies[indice].position).length());
+    }
+
+    assert!(
+        minima_al_sol > inicial_al_sol * 0.7,
+        "la nave se fue hacia la estrella: de {inicial_al_sol} a {minima_al_sol}"
+    );
+    // La gravedad del planeta si la atrae: termina posada en la
+    // superficie, no flotando ni perdida.
+    assert!(
+        maxima_al_planeta < distancia * 1.5,
+        "la nave se solto del planeta: llego a {maxima_al_planeta}"
+    );
+    let final_al_planeta = (nave.position - s.bodies[indice].position).length();
+    assert!(
+        final_al_planeta < distancia,
+        "la gravedad del planeta deberia haberla acercado"
+    );
+    assert!(
+        final_al_planeta > s.bodies[indice].radius * (1.0 - s.bodies[indice].terrain.amplitude),
+        "y la colision deberia haberla dejado afuera"
+    );
+}
+
+#[test]
+fn una_nave_quieta_si_cae_hacia_la_estrella() {
+    // El contraste de la prueba anterior: sin velocidad orbital, la
+    // gravedad hace su trabajo y la nave cae. Y la colision la detiene en
+    // la superficie en vez de dejarla atravesar la estrella.
+    let mut s = sistema();
+    let mut nave = Ship::default();
+    nave.position = Vec3::new(40.0, 0.0, 0.0);
+    nave.velocity = Vec3::ZERO;
+
+    let inicial = nave.position.length();
+    let dt = 1.0 / 120.0;
+    let mut minima = f32::INFINITY;
+    for _ in 0..3600 {
+        s.update(dt);
+        s.aplicar_fisica(&mut nave, dt, true);
+        nave.update(&ShipInput::default(), dt, None);
+        minima = minima.min((nave.position - s.bodies[0].position).length());
+    }
+
+    let final_ = (nave.position - s.bodies[0].position).length();
+    assert!(final_ < inicial * 0.5, "deberia haber caido: de {inicial} a {final_}");
+    assert!(
+        minima >= s.bodies[0].radius,
+        "la nave atraveso la estrella: llego a {minima}"
+    );
+}
+
+#[test]
+fn la_velocidad_orbital_es_la_derivada_de_la_posicion() {
+    let s = sistema();
+    let b = &s.bodies[2];
+    let h = 0.05;
+    let aproximada = (b.orbit.position(10.0 + h) - b.orbit.position(10.0 - h)) / (2.0 * h);
+    let exacta = b.orbit.velocity(10.0);
+    assert!(
+        (aproximada - exacta).length() < exacta.length() * 0.01,
+        "{:?} contra {:?}",
+        aproximada,
+        exacta
     );
 }

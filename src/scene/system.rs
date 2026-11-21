@@ -34,9 +34,20 @@ use crate::shaders::{
 const LODS_PLANETA: [u32; 4] = [4, 3, 2, 1];
 const LODS_LUNA: [u32; 3] = [3, 2, 1];
 
-/// Constante de gravitacion del juego. No busca ser realista: esta
-/// ajustada para que la atraccion se sienta sin volver imposible el vuelo.
-pub const G: f32 = 2.2;
+/// Constante de gravitacion del sistema.
+///
+/// No sale de la fisica real: esta elegida junto con la masa de la
+/// estrella para que el parametro gravitatorio `G * M` valga 380, que es
+/// el valor con el que TERRANOVA, a 34 unidades, tarda unos 64 segundos
+/// en dar una vuelta. Con eso, las orbitas que se dibujan y la gravedad
+/// que siente la nave describen el mismo sistema.
+pub const G: f32 = 0.1462;
+
+/// Masa de la estrella.
+const MASA_ESTRELLA: f32 = 2600.0;
+
+/// Parametro gravitatorio de la estrella, `G * M`.
+const MU_ESTRELLA: f32 = G * MASA_ESTRELLA;
 
 /// Interruptores que permiten demostrar en vivo que el descarte y los
 /// niveles de detalle cambian el trabajo del renderizador.
@@ -111,7 +122,7 @@ impl SolarSystem {
             rings: None,
             props: Vec::new(),
             prop_batches: Vec::new(),
-            mass: 2600.0,
+            mass: MASA_ESTRELLA,
             emissive: true,
             position: Vec3::ZERO,
             spin: 0.0,
@@ -125,7 +136,7 @@ impl SolarSystem {
         bodies.push(Body {
             name: "FERRUM".to_string(),
             radius: 1.15,
-            orbit: Orbit { radius: 22.0, speed: 0.155, phase: 0.6, inclination: 0.0 },
+            orbit: Orbit::kepler(22.0, MU_ESTRELLA, 0.6, 0.0),
             parent: Some(0),
             spin_speed: 0.38,
             axial_tilt: to_radians(6.0),
@@ -149,7 +160,7 @@ impl SolarSystem {
             rings: None,
             props: Vec::new(),
             prop_batches: Vec::new(),
-            mass: 24.0,
+            mass: 30.0,
             emissive: false,
             position: Vec3::ZERO,
             spin: 0.0,
@@ -182,7 +193,7 @@ impl SolarSystem {
         bodies.push(Body {
             name: "TERRANOVA".to_string(),
             radius: radio,
-            orbit: Orbit { radius: 34.0, speed: 0.098, phase: 2.4, inclination: 0.0 },
+            orbit: Orbit::kepler(34.0, MU_ESTRELLA, 2.4, 0.0),
             parent: Some(0),
             spin_speed: 0.26,
             axial_tilt: to_radians(18.0),
@@ -215,7 +226,7 @@ impl SolarSystem {
             rings: None,
             prop_batches: fusionar_props(&props),
             props,
-            mass: 42.0,
+            mass: 90.0,
             emissive: false,
             position: Vec3::ZERO,
             spin: 0.0,
@@ -227,7 +238,7 @@ impl SolarSystem {
         bodies.push(Body {
             name: "SELENE".to_string(),
             radius: 0.42,
-            orbit: Orbit { radius: 6.0, speed: 0.42, phase: 0.0, inclination: to_radians(9.0) },
+            orbit: Orbit::kepler(6.0, G * 90.0, 0.0, to_radians(9.0)),
             parent: Some(2),
             spin_speed: 0.62,
             axial_tilt: 0.0,
@@ -250,7 +261,7 @@ impl SolarSystem {
             rings: None,
             props: Vec::new(),
             prop_batches: Vec::new(),
-            mass: 3.0,
+            mass: 2.0,
             emissive: false,
             position: Vec3::ZERO,
             spin: 0.0,
@@ -264,7 +275,7 @@ impl SolarSystem {
         bodies.push(Body {
             name: "AURORA".to_string(),
             radius: radio,
-            orbit: Orbit { radius: 54.0, speed: 0.052, phase: 4.1, inclination: 0.0 },
+            orbit: Orbit::kepler(54.0, MU_ESTRELLA, 4.1, 0.0),
             parent: Some(0),
             spin_speed: 0.47,
             axial_tilt: to_radians(12.0),
@@ -303,7 +314,7 @@ impl SolarSystem {
             }),
             props: Vec::new(),
             prop_batches: Vec::new(),
-            mass: 160.0,
+            mass: 450.0,
             emissive: false,
             position: Vec3::ZERO,
             spin: 0.0,
@@ -315,7 +326,7 @@ impl SolarSystem {
         bodies.push(Body {
             name: "IO MENOR".to_string(),
             radius: 0.5,
-            orbit: Orbit { radius: 9.5, speed: 0.30, phase: 1.0, inclination: to_radians(4.0) },
+            orbit: Orbit::kepler(9.5, G * 450.0, 1.0, to_radians(4.0)),
             parent: Some(4),
             spin_speed: 0.5,
             axial_tilt: 0.0,
@@ -338,7 +349,7 @@ impl SolarSystem {
             rings: None,
             props: Vec::new(),
             prop_batches: Vec::new(),
-            mass: 4.0,
+            mass: 3.0,
             emissive: false,
             position: Vec3::ZERO,
             spin: 0.0,
@@ -371,7 +382,7 @@ impl SolarSystem {
         bodies.push(Body {
             name: "GELIDA".to_string(),
             radius: radio,
-            orbit: Orbit { radius: 76.0, speed: 0.034, phase: 5.6, inclination: 0.0 },
+            orbit: Orbit::kepler(76.0, MU_ESTRELLA, 5.6, 0.0),
             parent: Some(0),
             spin_speed: 0.21,
             axial_tilt: to_radians(27.0),
@@ -396,7 +407,7 @@ impl SolarSystem {
             rings: None,
             prop_batches: fusionar_props(&props),
             props,
-            mass: 30.0,
+            mass: 55.0,
             emissive: false,
             position: Vec3::ZERO,
             spin: 0.0,
@@ -429,7 +440,7 @@ impl SolarSystem {
         bodies.push(Body {
             name: "VULCANO".to_string(),
             radius: radio,
-            orbit: Orbit { radius: 98.0, speed: 0.022, phase: 3.2, inclination: 0.0 },
+            orbit: Orbit::kepler(98.0, MU_ESTRELLA, 3.2, 0.0),
             parent: Some(0),
             spin_speed: 0.17,
             axial_tilt: to_radians(32.0),
@@ -458,7 +469,7 @@ impl SolarSystem {
             rings: None,
             prop_batches: fusionar_props(&props),
             props,
-            mass: 48.0,
+            mass: 114.0,
             emissive: false,
             position: Vec3::ZERO,
             spin: 0.0,
@@ -573,6 +584,17 @@ impl SolarSystem {
         }
     }
 
+    /// Velocidad de un cuerpo en espacio de mundo, sumando la de su
+    /// padre.
+    pub fn velocidad_de(&self, indice: usize) -> Vec3 {
+        let b = &self.bodies[indice];
+        let propia = b.orbit.velocity(self.time);
+        match b.parent {
+            Some(p) => propia + self.velocidad_de(p),
+            None => propia,
+        }
+    }
+
     /// Indice del cuerpo mas cercano a un punto, contando la estrella.
     pub fn mas_cercano_total(&self, p: Vec3) -> usize {
         let mut mejor = 0;
@@ -624,7 +646,7 @@ impl SolarSystem {
             }
         }
         let mut choco = false;
-        for b in &self.bodies {
+        for (i, b) in self.bodies.iter().enumerate() {
             let d = ship.position - b.position;
             let dist = d.length();
             // Solo se consulta el relieve de los cuerpos que estan cerca.
@@ -634,7 +656,7 @@ impl SolarSystem {
             let inv = b.model_matrix().inverse_rigid();
             let dir_local = inv.mul_dir(d).normalized();
             let superficie = b.surface_radius(dir_local);
-            if ship.resolve_collision(b.position, superficie) {
+            if ship.resolve_collision(b.position, superficie, self.velocidad_de(i)) {
                 choco = true;
             }
         }

@@ -59,7 +59,10 @@ pub struct Ship {
     /// Rapidez con la que los giros alcanzan su objetivo.
     pub turn_response: f32,
     pub max_turn_rate: f32,
-    /// Rozamiento artificial: sin el, la nave nunca se detendria.
+    /// Rozamiento. En el vacio vale cero: la nave conserva su velocidad
+    /// y se detiene con el freno. Si tuviera rozamiento permanente, la
+    /// gravedad no podria sostener ninguna orbita porque la velocidad
+    /// tangencial se apagaria sola.
     pub drag: f32,
 }
 
@@ -82,7 +85,7 @@ impl Default for Ship {
             throttle_response: 2.6,
             turn_response: 5.0,
             max_turn_rate: 1.5,
-            drag: 0.55,
+            drag: 0.0,
         }
     }
 }
@@ -120,14 +123,23 @@ impl Ship {
         let dt = dt.clamp(0.0, 0.1);
 
         // Giros progresivos: la velocidad angular persigue a la entrada.
+        let (yaw0, pitch0, roll0) = (self.rate_yaw, self.rate_pitch, self.rate_roll);
         let k = suavizado(self.turn_response, dt);
         self.rate_yaw += (input.yaw * self.max_turn_rate - self.rate_yaw) * k;
         self.rate_pitch += (input.pitch * self.max_turn_rate - self.rate_pitch) * k;
         self.rate_roll += (input.roll * self.max_turn_rate * 1.4 - self.rate_roll) * k;
 
-        let giro = Mat4::rotation_axis(self.up, -self.rate_yaw * dt)
-            * Mat4::rotation_axis(self.right, self.rate_pitch * dt)
-            * Mat4::rotation_axis(self.forward, -self.rate_roll * dt);
+        // El angulo girado usa el promedio de la velocidad angular antes
+        // y despues del paso, igual que la posicion usa el promedio de la
+        // velocidad: con el valor final solo, el giro dependeria del
+        // tamaño del paso.
+        let yaw = (yaw0 + self.rate_yaw) * 0.5;
+        let pitch = (pitch0 + self.rate_pitch) * 0.5;
+        let roll = (roll0 + self.rate_roll) * 0.5;
+
+        let giro = Mat4::rotation_axis(self.up, -yaw * dt)
+            * Mat4::rotation_axis(self.right, pitch * dt)
+            * Mat4::rotation_axis(self.forward, -roll * dt);
         self.forward = giro.mul_dir(self.forward);
         self.up = giro.mul_dir(self.up);
         self.right = giro.mul_dir(self.right);
@@ -151,6 +163,7 @@ impl Ship {
         let k = suavizado(self.throttle_response, dt);
         self.throttle += (input.thrust - self.throttle) * k;
 
+        let velocidad_previa = self.velocity;
         let empuje = self.max_thrust * if input.boost { self.boost_factor } else { 1.0 };
         self.velocity += self.forward * (self.throttle * empuje * dt);
         self.velocity += self.right * (input.strafe * empuje * 0.35 * dt);
@@ -163,9 +176,16 @@ impl Ship {
             self.throttle *= f;
         }
 
-        // Rozamiento constante, tambien independiente de los cuadros.
-        self.velocity = self.velocity * (-self.drag * dt).exp();
-        self.position += self.velocity * dt;
+        // Rozamiento, si lo hay. Tambien independiente de los cuadros.
+        if self.drag > 0.0 {
+            self.velocity = self.velocity * (-self.drag * dt).exp();
+        }
+
+        // Se avanza con el promedio de la velocidad antes y despues de
+        // aplicar la aceleracion. Integrar con la velocidad final sola
+        // introduce un error proporcional al tamaño del paso, y entonces
+        // dos maquinas con distinta tasa de cuadros se separarian.
+        self.position += (velocidad_previa + self.velocity) * (0.5 * dt);
     }
 
     /// Suma la atraccion de un cuerpo durante `dt` segundos.
@@ -186,7 +206,17 @@ impl Ship {
     /// justo afuera y se anula la componente de velocidad que apuntaba
     /// hacia adentro, de modo que resbala por la superficie en vez de
     /// quedarse pegada.
-    pub fn resolve_collision(&mut self, center: Vec3, surface_radius: f32) -> bool {
+    ///
+    /// El choque se resuelve sobre la velocidad *relativa* al cuerpo. Los
+    /// planetas se mueven: si se usara la velocidad absoluta, una nave
+    /// posada en la superficie conservaria una velocidad que el planeta ya
+    /// no tiene y saldria despedida.
+    pub fn resolve_collision(
+        &mut self,
+        center: Vec3,
+        surface_radius: f32,
+        body_velocity: Vec3,
+    ) -> bool {
         let d = self.position - center;
         let dist = d.length();
         let minimo = surface_radius + self.radius;
@@ -195,10 +225,12 @@ impl Ship {
         }
         let n = d / dist;
         self.position = center + n * minimo;
-        let hacia_adentro = self.velocity.dot(n);
+
+        let relativa = self.velocity - body_velocity;
+        let hacia_adentro = relativa.dot(n);
         if hacia_adentro < 0.0 {
             // Se quita la componente normal y se pierde algo de energia.
-            self.velocity = (self.velocity - n * hacia_adentro) * 0.82;
+            self.velocity = body_velocity + (relativa - n * hacia_adentro) * 0.82;
         }
         true
     }

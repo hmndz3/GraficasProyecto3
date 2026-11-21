@@ -155,15 +155,19 @@ fn main() {
 /// Deja la nave a una distancia comoda del cuerpo indicado.
 fn colocar_junto_a(estado: &mut Estado, sistema: &SolarSystem, indice: usize) {
     let b = &sistema.bodies[indice];
-    let distancia = b.outer_radius() * 4.5 + 2.0;
+    let distancia = b.outer_radius() * 2.2 + 0.6;
     // Se llega desde el lado iluminado para que el planeta se vea.
     let hacia_el_sol = (sistema.bodies[0].position - b.position).normalized();
     let lateral = hacia_el_sol.cross(Vec3::UP).normalized();
     let direccion = (hacia_el_sol * 0.75 + lateral * 0.6 + Vec3::UP * 0.25).normalized();
 
     estado.nave.position = b.position + direccion * distancia;
-    estado.nave.velocity = Vec3::ZERO;
     estado.nave.throttle = 0.0;
+
+    // La nave hereda la velocidad orbital del cuerpo al que llega. Si se
+    // quedara en reposo respecto de la estrella, la gravedad la arrastraria
+    // hacia ella mientras el planeta sigue su camino.
+    estado.nave.velocity = sistema.velocidad_de(indice);
     estado.nave.forward = (b.position - estado.nave.position).normalized();
     estado.nave.up = Vec3::UP;
     estado.nave.right = estado.nave.up.cross(estado.nave.forward).normalized();
