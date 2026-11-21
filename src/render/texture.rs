@@ -130,3 +130,32 @@ pub fn apply_normal_map(normal: Vec3, encoded: Vec3, strength: f32) -> Vec3 {
 
     (t * nt.x + b * nt.y + n * nt.z).normalized()
 }
+
+/// Igual que `apply_normal_map`, pero con la tangente dada por quien
+/// llama.
+///
+/// Es la version que usan los planetas: la tangente se construye en
+/// espacio de objeto y se lleva a mundo con la matriz de normales, de modo
+/// que el relieve gira junto con el planeta en vez de quedarse pegado a la
+/// pantalla. La tangente se reortogonaliza contra la normal interpolada
+/// (Gram-Schmidt) porque la geometria deformada ya inclino esa normal.
+#[inline]
+pub fn apply_normal_map_tbn(
+    normal_world: Vec3,
+    tangent_world: Vec3,
+    encoded: Vec3,
+    strength: f32,
+) -> Vec3 {
+    let n = normal_world.normalized();
+    let t = tangent_world - n * n.dot(tangent_world);
+    if t.length_squared() < 1e-10 {
+        return n;
+    }
+    let t = t.normalized();
+    let b = n.cross(t);
+
+    let nt = (encoded * 2.0 - Vec3::ONE).normalized();
+    let nt = Vec3::new(nt.x * strength, nt.y * strength, nt.z).normalized();
+
+    (t * nt.x + b * nt.y + n * nt.z).normalized()
+}

@@ -22,6 +22,12 @@ pub struct Uniforms {
     /// Escala uniforme del objeto, para que el ruido 3D tenga la misma
     /// frecuencia aparente en cuerpos de distinto tamaño.
     pub object_scale: f32,
+    /// Tinte por instancia. Permite que un mismo shader pinte muchas
+    /// copias del mismo modelo con variaciones de color.
+    pub tint: Vec3,
+    /// Parametro libre por instancia, entre 0 y 1. Los objetos de
+    /// superficie lo usan como semilla de su variacion.
+    pub param: f32,
 }
 
 impl Default for Uniforms {
@@ -35,6 +41,8 @@ impl Default for Uniforms {
             camera_world: Vec3::ZERO,
             time: 0.0,
             object_scale: 1.0,
+            tint: Vec3::ONE,
+            param: 0.0,
         }
     }
 }
